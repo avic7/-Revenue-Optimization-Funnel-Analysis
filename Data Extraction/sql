@@ -1,0 +1,122 @@
+
+-- Users (Applying ROW_NUMBER to ensure no duplicate user records)
+WITH Deduplicated_Users AS (
+    SELECT 
+        user_id,
+        country,
+        device_category,
+        account_created_at::DATE AS join_date,
+        ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY account_created_at DESC) as row_num
+    FROM 
+        raw_data.users
+)
+SELECT 
+    user_id,
+    country,
+    device_category,
+    join_date
+FROM 
+    Deduplicated_Users
+WHERE 
+    row_num = 1;
+
+
+-- Products
+SELECT 
+    item_id,
+    item_name,
+    category,
+    CAST(price AS DECIMAL(10,2)) AS price
+FROM 
+    raw_data.products
+WHERE 
+    is_active = TRUE;
+
+
+-- Traffic_Mapping
+SELECT 
+    traffic_id,
+    traffic_source,
+    traffic_medium
+FROM 
+    raw_data.traffic_mapping;
+
+
+-- Events
+-- Cleans timestamps and handles NULL revenue values for non-purchase events
+SELECT 
+    event_id,
+    user_id,
+    item_id,
+    traffic_id,
+    event_name,
+    event_timestamp::DATE AS event_date,
+    event_timestamp::TIME AS event_time,
+    COALESCE(purchase_revenue, 0.00) AS purchase_revenue
+FROM 
+    raw_data.web_events_log
+WHERE 
+    event_timestamp >= '2024-01-01 00:00:00' 
+    AND event_timestamp <= '2025-12-31 23:59:59'
+    AND event_name IN (
+        'page_view', 
+        'add_to_cart', 
+        'begin_checkout', 
+        'add_payment_info', 
+        'purchase'
+    );
+
+
+
+-- This query joins the Fact and Dimension tables into a single, flattened dataset
+-- ready to be exported as 'Events.csv'.
+WITH Cleaned_Events AS (
+    SELECT 
+        e.event_id,
+        e.user_id,
+        e.item_id,
+        e.traffic_id,
+        e.event_name,
+        e.event_timestamp,
+        e.event_timestamp::DATE AS event_date,
+        COALESCE(e.purchase_revenue, 0.00) AS purchase_revenue
+    FROM 
+        raw_data.web_events_log e
+    WHERE 
+        e.event_timestamp >= '2024-01-01 00:00:00' 
+        AND e.event_timestamp <= '2025-12-31 23:59:59'
+),
+
+User_Base AS (
+    SELECT 
+        user_id,
+        country,
+        device_category
+    FROM 
+        raw_data.users
+)
+
+SELECT 
+    ce.event_id,
+    ce.user_id,
+    ce.event_timestamp,
+    ce.event_date,
+    ce.event_name,
+    p.item_name,
+    p.category,
+    p.price,
+    ub.country,
+    ub.device_category,
+    tm.traffic_source,
+    tm.traffic_medium,
+    ce.purchase_revenue
+FROM 
+    Cleaned_Events ce
+LEFT JOIN 
+    User_Base ub ON ce.user_id = ub.user_id
+LEFT JOIN 
+    raw_data.products p ON ce.item_id = p.item_id
+LEFT JOIN 
+    raw_data.traffic_mapping tm ON ce.traffic_id = tm.traffic_id
+ORDER BY 
+    ce.event_timestamp ASC;
