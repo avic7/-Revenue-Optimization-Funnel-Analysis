@@ -3,6 +3,12 @@
 
 ---
 
+<div align="center">
+  <a href="https://1drv.ms/p/c/9975edab34b9d984/IQAmEU3iDjgYQIOqK4lVYOkdAboktKlUU0vHQ7l46xqThpE?e=CrhbU3" target="_blank">
+    <img src="https://img.shields.io/badge/View_Presentation_Deck-D24726?style=for-the-badge&logo=microsoftpowerpoint&logoColor=white" alt="View Presentation Deck" />
+  </a>
+</div>
+
 ## Client Background
 
 Over the past two years, **NorthPeak Electronics** has established a formidable presence as a premier D2C retailer in consumer audio, wearables, and computing. We have seen incredible momentum. But as our traffic scales, top-line growth is beginning to mask critical friction points in our customer journey.
